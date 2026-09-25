@@ -76,6 +76,16 @@ The evolution templates are also standalone user prompts:
 
 Here, `{intro}` is usually the same data-schema and task context used by a generation agent, while `{extra_guidance}` is an optional mechanism-specific or feedback-derived guidance block.
 
+## Running a Trial (local addition)
+
+This checkout adds a small runtime harness around the templates (`cogalpha/`, `run_trial.py`, `config/`), using headless Claude Code (`claude -p`) as the LLM and yfinance OHLCV data. See `CLAUDE.md` for details and how it differs from the paper.
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python run_trial.py --config config/smoke.yaml   # quick end-to-end check
+.venv/bin/python run_trial.py --config config/trial.yaml   # scaled-down trial
+```
+
 ## Disclaimer
 
 CogAlpha and these prompt templates are intended for academic research. They do not provide financial advice. Users are responsible for sourcing data, validating generated factors, and assessing risk in their own context.

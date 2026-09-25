@@ -1,0 +1,9 @@
+# Runtime for the CogAlpha trial harness (see CLAUDE.md).
+numpy>=2.2
+pandas>=2.2,<3   # prompts promise pandas 2.x semantics
+scipy>=1.15
+TA-Lib>=0.6        # wheels bundle the C library; no system package needed
+scikit-learn>=1.5  # mutual information, Ridge
+lightgbm>=4.7
+yfinance>=0.2.50   # OHLCV download
+pyyaml>=6

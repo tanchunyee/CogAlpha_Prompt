@@ -1,0 +1,62 @@
+# Smoke test: 1 agent, 1 generation, ~10 LLM calls. Verifies the pipeline end to end.
+
+run_name: smoke
+
+data:
+  source: yfinance            # paper: Qlib (CSI300/CSI500/S&P500), yfinance (HSI/HSCI)
+  universe: sp100             # key in cogalpha/universes.py, or a list of tickers
+  start: "2014-01-01"
+  end: "2025-12-31"
+  train: ["2014-01-01", "2021-12-31"]   # fitness evaluation period
+  valid: ["2022-01-01", "2022-12-31"]
+  test:  ["2023-01-01", "2025-12-31"]
+  horizon: 10                 # forward-return horizon in trading days (paper: 10, also 30)
+
+llm:
+  backend: claude_cli         # `claude -p` on your claude.ai (Pro) login — no API key
+  generation_model: sonnet    # task agents + mutation/crossover (paper: gpt-oss-120b)
+  checker_model: haiku        # judge / repair / logic-improvement / summaries / paraphrase
+  generation_thinking_tokens: 4096   # extended-thinking cap per call (paper: max tokens 4096)
+  checker_thinking_tokens: 1024      # uncapped, haiku spent ~7k thinking tokens per judge call
+  timeout_s: 300
+  max_parallel: 2             # concurrent CLI calls; higher burns quota faster
+  max_calls: 15               # smoke test budget
+
+agents:                       # any of the 21 prompts/seven_level_agent_hierarchy/agent_*.md
+  - liquidity
+
+evolution:
+  num_per_request: 3
+  initial_requests: 1
+  parent_pool: 8              #                                        (paper: 32)
+  children: 2
+  generations: 1
+  inject_every: 2             # fresh task-agent factors every N generations (paper: 2)
+  elite_carry: 2              # top elites carried into next generation (paper: 2)
+  op_weights: {mutation: 1, crossover: 1, crossover_mutation: 1}
+  diversified_guidance: true  # paraphrase agent guidance (light/moderate/creative/divergent/concrete)
+  adaptive_generation: true   # feed effective/ineffective factor summaries into prompts
+  feedback_samples: 2         # valid / invalid examples summarised per generation (paper: 2 + 2)
+
+quality:
+  llm_judge: true             # Judge Agent -> Logic Improvement Agent on reject
+  llm_code_quality: false     # Code Quality Agent pre-pass (execution already catches errors)
+  max_repairs: 2              # Code Repair / Logic Improvement attempts before discarding
+  max_nan_ratio: 0.30         # paper: discard > 30% NaN
+  min_distinct_per_day: 5
+  exec_timeout_s: 60
+
+fitness:
+  qualified_pct: 65           # paper: (65, 80)
+  elite_pct: 80
+  # MI floor: paper uses 0.02, but our kNN estimator on daily cross-sections gives ~0-0.01 for
+  # real signals, so MI only enters through the percentile test here.
+  qualified_min: {ic: 0.005, rank_ic: 0.005, icir: 0.05, rank_icir: 0.05, mi: 0.0}
+  elite_min:     {ic: 0.01,  rank_ic: 0.01,  icir: 0.10, rank_icir: 0.10, mi: 0.0}
+  mi_samples: 50000
+
+final:
+  model: lightgbm             # lightgbm | ridge
+  top_k: 10                   # TopK-Dropout long book vs equal-weight universe (paper: top 50 / drop 5 of 300)
+  n_drop: 2                   # max names swapped per day
+  cost_bps: 10                # one-way cost on turnover
